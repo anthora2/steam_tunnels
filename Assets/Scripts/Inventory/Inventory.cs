@@ -60,8 +60,10 @@ public class Inventory : MonoBehaviour
                 currentWeight += additionalWeight;
 
                 if (remaining <= 0)
+                {
                     OnInventoryChanged?.Invoke();
                     return true;
+                }
             }
         }
 

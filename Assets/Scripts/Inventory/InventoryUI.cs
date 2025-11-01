@@ -4,6 +4,10 @@ using TMPro;
 
 public class InventoryUI : MonoBehaviour
 {
+
+    [Header("Inventory Reference")]
+    [SerializeField] private Inventory inventory;
+
     [Header("UI References")]
     [SerializeField] private GameObject hotbarPanel;
     [SerializeField] private Transform hotbarSlotsContainer;
@@ -14,18 +18,15 @@ public class InventoryUI : MonoBehaviour
     [SerializeField] private KeyCode[] hotbarKeys = new KeyCode[]  // keys to bind to hotbar slots
     { KeyCode.Alpha1, KeyCode.Alpha2, KeyCode.Alpha3, KeyCode.Alpha4, KeyCode.Alpha5 };
 
-    private Inventory inventory;
     private InventorySlotUI[] hotbarSlots;
     private int selectedSlotIndex = 0;
 
     // Initalize the hotbar
     private void Start()
     {
-        // Get the inventory component
-        inventory = FindObjectOfType<Inventory>();
         if (inventory == null)
         {
-            Debug.LogError("InventoryUI could not find the inventory component!");
+            Debug.LogError("InventoryUI could not find the inventory component! Please assign it in the inspector.");
             return;
         }
 
@@ -37,6 +38,14 @@ public class InventoryUI : MonoBehaviour
 
         // Update the UI to reflect the current inventory state
         UpdateUI();
+    }
+
+    private void OnDestroy()
+    {
+        if (inventory != null)
+        {
+            inventory.OnInventoryChanged -= UpdateUI;
+        }
     }
 
     // Handle input updates
@@ -53,19 +62,19 @@ public class InventoryUI : MonoBehaviour
 
         // Mouse scroll wheel for hotbar selection
         float scroll = Input.GetAxis("Mouse ScrollWheel");
-        if (scroll != 0)
+        if (scroll > 0f)
         {
-            int newIndex = selectedSlotIndex + (scroll > 0 ? 1 : -1);
-            // Wrap around: if negative, go to last slot; if beyond size, go to first slot
-            if (newIndex < 0)
-            {
-                newIndex = hotbarSize - 1;
-            }
-            else if (newIndex >= hotbarSize)
-            {
-                newIndex = 0;
-            }
-            SelectHotbarSlot(newIndex);
+            SelectHotbarSlot((selectedSlotIndex - 1 + hotbarSize) % hotbarSize);
+        }
+        else if (scroll < 0f)
+        {
+            SelectHotbarSlot((selectedSlotIndex + 1) % hotbarSize);
+        }
+
+        // Use item in selected hotbar slot
+        if (Input.GetKeyDown(KeyCode.E))
+        {
+            UseSelectedItem();
         }
     }
 
@@ -105,8 +114,10 @@ public class InventoryUI : MonoBehaviour
         // Update the hotbar slots - iterate through ALL slots
         for (int i = 0; i < hotbarSize; i++)
         {
-            // Update the slot with the item data
-            if (i < hotbarSlots.Length)
+            // Update the slot with the item data (or null if slot is empty)
+            // NOTE: Hotbar slots and inventory slots are not the same thing, so we need to add a check to make sure the slot is not null
+            // Consider refactoring this decouple inventory slots from hotbar slots
+            if (i < inventory.items.Count)
             {
                 hotbarSlots[i].UpdateSlot(inventory.items[i]);
             }
@@ -146,5 +157,20 @@ public class InventoryUI : MonoBehaviour
     {
         InventorySlot slot = GetSelectedHotbarSlot();
         return slot != null ? slot.item : null;
+    }
+
+    // Use the item in the currently selected hotbar slot
+    private void UseSelectedItem()
+    {
+        InventorySlot slot = GetSelectedHotbarSlot();
+        if (slot != null && slot.item != null && !slot.IsEmpty)
+        {
+            Debug.Log($"Using item '{slot.item.itemName}' from hotbar slot {selectedSlotIndex + 1}");
+            slot.item.Use();
+        }
+        else
+        {
+            Debug.Log($"No item in hotbar slot {selectedSlotIndex + 1} to use.");
+        }
     }
 }

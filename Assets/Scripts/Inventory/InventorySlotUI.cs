@@ -35,7 +35,12 @@ public class InventorySlotUI : MonoBehaviour
             // Update UI to show empty slot
             if (itemImage != null)
             {
-                itemImage.sprite = emptySlotSprite;
+                if (emptySlotSprite != null)
+                {
+                    itemImage.sprite = emptySlotSprite;
+                }
+                // Optionally hide the image if empty slot sprite is not set
+                itemImage.enabled = emptySlotSprite != null;
             }
 
             if (quantityText != null)
@@ -48,7 +53,15 @@ public class InventorySlotUI : MonoBehaviour
             // Update UI to show item
             if (itemImage != null)
             {
-                itemImage.sprite = slot.item.itemSprite;
+                if (slot.item != null && slot.item.itemSprite != null)
+                {
+                    itemImage.sprite = slot.item.itemSprite;
+                    itemImage.enabled = true;
+                }
+                else
+                {
+                    itemImage.enabled = false;
+                }
             }
 
             if (quantityText != null)
@@ -62,6 +75,12 @@ public class InventorySlotUI : MonoBehaviour
                     quantityText.text = "";
                 }
             }
+        }
+
+        // Preserve the selection state by updating background color
+        if (backgroundImage != null)
+        {
+            backgroundImage.color = isSelected ? selectedColor : normalColor;
         }
     }
 
