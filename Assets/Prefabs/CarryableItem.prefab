@@ -12,8 +12,8 @@ GameObject:
   - component: {fileID: 2652326839189468426}
   - component: {fileID: 5083202652076814160}
   - component: {fileID: 2155144990270037345}
-  - component: {fileID: 8733282507276013054}
   - component: {fileID: -7460154638446517086}
+  - component: {fileID: 2433018579759676726}
   m_Layer: 0
   m_Name: CarryableItem
   m_TagString: Untagged
@@ -113,21 +113,6 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &8733282507276013054
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4812942000161083233}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 11075885ee75b48e2b5e77e3325197d7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ItemPickup
-  item: {fileID: 11400000, guid: 6bc696d2d49594947823362cae3ddda3, type: 2}
-  pickupSound: {fileID: 8300000, guid: 6c42967c07149417d822943812cfc6d8, type: 3}
-  audioSource: {fileID: 0}
 --- !u!82 &-7460154638446517086
 AudioSource:
   m_ObjectHideFlags: 0
@@ -225,3 +210,17 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!114 &2433018579759676726
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4812942000161083233}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 062020eef91654a338a60416d3d65bbf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ItemPickup
+  item: {fileID: 11400000, guid: 6bc696d2d49594947823362cae3ddda3, type: 2}
+  pickupSound: {fileID: 8300000, guid: 6c42967c07149417d822943812cfc6d8, type: 3}

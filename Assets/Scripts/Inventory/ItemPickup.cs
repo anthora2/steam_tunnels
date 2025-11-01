@@ -30,7 +30,7 @@ public class ItemPickup : MonoBehaviour
                 Debug.Log("Playing pickup sound");
                 AudioSource.PlayClipAtPoint(pickupSound, transform.position);
             }
-			Debug.Log($"Picked up {item.ItemName}");
+			Debug.Log($"Picked up {item.itemName}");
 			Destroy(gameObject);
 		}
 		else
