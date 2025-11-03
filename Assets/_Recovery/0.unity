@@ -198,11 +198,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!224 &108563848 stripped
-RectTransform:
-  m_CorrespondingSourceObject: {fileID: 757159468586851200, guid: 5a47330002745499c992fd9fbdf8b95b, type: 3}
-  m_PrefabInstance: {fileID: 7981186445350673253}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &156388504
 GameObject:
   m_ObjectHideFlags: 0
@@ -700,71 +695,6 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 730429615}
   m_Mesh: {fileID: 10208, guid: 0000000000000000e000000000000000, type: 0}
---- !u!1 &813363154
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 813363155}
-  - component: {fileID: 813363156}
-  m_Layer: 5
-  m_Name: WheelPickerMenu
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &813363155
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 813363154}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 851067885}
-  m_Father: {fileID: 108563848}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 600, y: 600}
-  m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &813363156
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 813363154}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b5f7eeecbfa4c294ba30f25137eae9d2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WheelPickerMenu
-  items:
-  - {fileID: 11400000, guid: b6d378a6d40b30d4798af4362f9c8f71, type: 2}
-  - {fileID: 11400000, guid: fa2ef1a794ff8924da16f4080af1bca6, type: 2}
-  - {fileID: 11400000, guid: e79914db785b2284390b888a9a67a0bb, type: 2}
-  - {fileID: 11400000, guid: 2b85ed5f4bc05cf459458d64f698d767, type: 2}
-  - {fileID: 11400000, guid: 04a79a947e4673e448c820e8a572cff1, type: 2}
-  wheelRoot: {fileID: 851067885}
-  wheelOptionPrefab: {fileID: 1705660390622226995, guid: 6277e82bbcd1c41468e7f1c5dbca6471, type: 3}
-  maxItems: 8
-  optionPaddingDegrees: 0.5
-  wheelRadius: 200
-  openKey: 9
-  scrollSensitivity: 0.5
-  onItemSelected:
-    m_PersistentCalls:
-      m_Calls: []
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
@@ -814,41 +744,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &851067884
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 851067885}
-  m_Layer: 5
-  m_Name: WheelRoot
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &851067885
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 851067884}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 813363155}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 600, y: 600}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1081071820 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 4671588130839927074, guid: 5a47330002745499c992fd9fbdf8b95b, type: 3}
@@ -1111,7 +1006,6 @@ Transform:
   - {fileID: 730429616}
   - {fileID: 1416993126}
   - {fileID: 156388505}
-  - {fileID: 108563848}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1482169247
@@ -1158,13 +1052,13 @@ MonoBehaviour:
   m_GameObject: {fileID: 1482169244}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 075d80609d2da954296ad8a0739b8b00, type: 3}
+  m_Script: {fileID: 11500000, guid: 963faab0ec68942d7bc1e64258296218, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::HotbarUI
+  m_EditorClassIdentifier: Assembly-CSharp::InventoryUI
   inventory: {fileID: 1482169248}
   hotbarPanel: {fileID: 1081071820}
   hotbarSlotsContainer: {fileID: 1081071821}
-  slotPrefab: {fileID: 6479889663448242276, guid: 7569abbf93ae2d84c84be62a426c56a3, type: 3}
+  slotPrefab: {fileID: 4369151504749480466, guid: 8a0b1417244674349b2ee31531659632, type: 3}
   hotbarSize: 5
   hotbarKeys: 3100000032000000330000003400000035000000
 --- !u!1001 &5714295269086410826
@@ -1230,7 +1124,7 @@ PrefabInstance:
   serializedVersion: 2
   m_Modification:
     serializedVersion: 3
-    m_TransformParent: {fileID: 1482169246}
+    m_TransformParent: {fileID: 0}
     m_Modifications:
     - target: {fileID: 757159468586851200, guid: 5a47330002745499c992fd9fbdf8b95b, type: 3}
       propertyPath: m_Pivot.x
@@ -1314,14 +1208,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4547377552339850368, guid: 5a47330002745499c992fd9fbdf8b95b, type: 3}
       propertyPath: m_Name
-      value: PlayerCanvas
+      value: InventoryCanvas
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
-    m_AddedGameObjects:
-    - targetCorrespondingSourceObject: {fileID: 757159468586851200, guid: 5a47330002745499c992fd9fbdf8b95b, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 813363155}
+    m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 5a47330002745499c992fd9fbdf8b95b, type: 3}
 --- !u!1660057539 &9223372036854775807
@@ -1334,5 +1225,6 @@ SceneRoots:
   - {fileID: 5714295269086410826}
   - {fileID: 1482169246}
   - {fileID: 1338382525}
+  - {fileID: 7981186445350673253}
   - {fileID: 52138807}
   - {fileID: 440159009}

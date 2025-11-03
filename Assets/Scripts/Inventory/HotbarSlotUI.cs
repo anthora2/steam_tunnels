@@ -2,8 +2,8 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
-/* UI Component for displaying a single inventory slot */
-public class InventorySlotUI : MonoBehaviour
+/* UI Component for displaying a single hotbar slot */
+public class HotbarSlotUI : MonoBehaviour
 {
     [Header("UI References")]
     [SerializeField] private Image itemImage;
@@ -20,19 +20,19 @@ public class InventorySlotUI : MonoBehaviour
     private int slotIndex;
     private bool isSelected = false;
 
-    // Initialize the slot with the given index and clear it
+    // Initialize the hotbar slot with the given index and clear it
     public void Initialize(int index)
     {
         slotIndex = index;
         ClearSlot();
     }
 
-    // Refresh the UI to reflect the current slot state
+    // Refresh the UI to reflect the current hotbar slot state
     private void RefreshUI()
     {
         if (slot == null || slot.IsEmpty)
         {
-            // Update UI to show empty slot
+            // Update UI to show empty hotbar slot
             if (itemImage != null)
             {
                 if (emptySlotSprite != null)
@@ -50,7 +50,7 @@ public class InventorySlotUI : MonoBehaviour
         }
         else 
         {
-            // Update UI to show item
+            // Update UI to show item in hotbar slot
             if (itemImage != null)
             {
                 if (slot.item != null && slot.item.itemSprite != null)
@@ -81,24 +81,25 @@ public class InventorySlotUI : MonoBehaviour
         if (backgroundImage != null)
         {
             backgroundImage.color = isSelected ? selectedColor : normalColor;
+            Debug.Log("Changing background color to: " + backgroundImage.color + " for slot: " + slotIndex);
         }
     }
 
-    // Update slot with new slot data
+    // Update hotbar slot with new slot data
     public void UpdateSlot(InventorySlot newSlot)
     {
         slot = newSlot;
         RefreshUI();
     }
 
-    // Clear slot and reset UI
+    // Clear hotbar slot and reset UI
     public void ClearSlot()
     {
         slot = null;
         RefreshUI();
     }
 
-    // Set the selected state of the slot
+    // Set the selected state of the hotbar slot
     public void SetSelected(bool isSelected)
     {
         this.isSelected = isSelected;
@@ -113,13 +114,13 @@ public class InventorySlotUI : MonoBehaviour
         }
     }
 
-    // Get slot
+    // Get hotbar slot
     public InventorySlot GetSlot()
     {
         return slot;
     }
 
-    // Get slot index
+    // Get hotbar slot index
     public int GetSlotIndex()
     {
         return slotIndex;
