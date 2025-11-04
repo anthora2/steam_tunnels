@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class PlayerCame : MonoBehaviour
+public class PlayerCam : MonoBehaviour
 {
 
     public float sensX;
