@@ -18,7 +18,7 @@ public class HotbarSlotUI : MonoBehaviour
 
     private InventorySlot slot;
     private int slotIndex;
-    private bool isSelected = false;
+    public bool isSelected = false;
 
     // Initialize the hotbar slot with the given index and clear it
     public void Initialize(int index)

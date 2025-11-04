@@ -79,7 +79,6 @@ public class WheelPickerMenu : MonoBehaviour
         if (wheelRoot != null) wheelRoot.gameObject.SetActive(true);
 
         // Initialize to first item (index 0)
-        selectedIndex = 0;
         UpdateSelection();
     }
 
@@ -91,7 +90,6 @@ public class WheelPickerMenu : MonoBehaviour
         // Hide the wheel object but keep the menu active for input detection
         if (wheelRoot != null) wheelRoot.gameObject.SetActive(false);
         ClearSelection();
-        selectedIndex = 0;
     }
 
     // Handle the scroll input
@@ -130,10 +128,7 @@ public class WheelPickerMenu : MonoBehaviour
     {
         for (int i = 0; i < wheelOptions.Count; i++)
         {
-            if (wheelOptions[i] != null)
-            {
-                wheelOptions[i].SetSelected(i == selectedIndex);
-            }
+            wheelOptions[i].SetSelected(i == selectedIndex);
         }
     }
 
