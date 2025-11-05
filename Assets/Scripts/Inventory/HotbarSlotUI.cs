@@ -38,9 +38,12 @@ public class HotbarSlotUI : MonoBehaviour
                 if (emptySlotSprite != null)
                 {
                     itemImage.sprite = emptySlotSprite;
+                    itemImage.enabled = true;
                 }
-                // Optionally hide the image if empty slot sprite is not set
-                itemImage.enabled = emptySlotSprite != null;
+                else
+                {
+                    itemImage.enabled = false;
+                }
             }
 
             if (quantityText != null)
@@ -81,7 +84,6 @@ public class HotbarSlotUI : MonoBehaviour
         if (backgroundImage != null)
         {
             backgroundImage.color = isSelected ? selectedColor : normalColor;
-            Debug.Log("Changing background color to: " + backgroundImage.color + " for slot: " + slotIndex);
         }
     }
 
