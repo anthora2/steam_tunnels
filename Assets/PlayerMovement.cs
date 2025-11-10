@@ -1,11 +1,10 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
+using Mirror;
 
-public class PlayerMovement : MonoBehaviour {
+public class PlayerMovement : NetworkBehaviour
+{
     [Header("Movement")]
     public float moveSpeed;
-
     public float groundDrag;
 
     [Header("Ground Check")]
@@ -17,45 +16,77 @@ public class PlayerMovement : MonoBehaviour {
 
     float horizontalInput;
     float verticalInput;
-
     Vector3 moveDirection;
 
     Rigidbody rb;
+    Camera cam;
+    AudioListener listener;
 
-    private void Start() {
+    void Start()
+    {
         rb = GetComponent<Rigidbody>();
         rb.freezeRotation = true;
+
+        // find camera and audio listener attached to this player
+        cam = GetComponentInChildren<Camera>(true);
+        listener = GetComponentInChildren<AudioListener>(true);
+
+        // disable camera/audio for everyone except the local player
+        if (!isLocalPlayer)
+        {
+            if (cam) cam.enabled = false;
+            if (listener) listener.enabled = false;
+        }
+        else
+        {
+            if (cam) cam.enabled = true;
+            if (listener) listener.enabled = true;
+
+            // optional: lock cursor for local player
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
+        }
     }
 
-    private void Update() {
-        grounded = Physics.Raycast(transform.position, Vector3.down, playerHeight * 1 + 0.2f, whatIsGround);
+    void Update()
+    {
+        // only the local player should read input and move
+        if (!isLocalPlayer) return;
+
+        grounded = Physics.Raycast(transform.position, Vector3.down, playerHeight * 1f + 0.2f, whatIsGround);
         MyInput();
         SpeedControl();
 
-        if (grounded) 
+        if (grounded)
             rb.linearDamping = groundDrag;
         else
-        rb.linearDamping = 0;
+            rb.linearDamping = 0;
     }
 
-    private void FixedUpdate() {
+    void FixedUpdate()
+    {
+        if (!isLocalPlayer) return;
         MovePlayer();
     }
 
-    private void MyInput() {
+    void MyInput()
+    {
         horizontalInput = Input.GetAxisRaw("Horizontal");
         verticalInput = Input.GetAxisRaw("Vertical");
     }
 
-    private void MovePlayer() {
+    void MovePlayer()
+    {
         moveDirection = orientation.forward * verticalInput + orientation.right * horizontalInput;
         rb.AddForce(moveDirection.normalized * moveSpeed * 10f, ForceMode.Force);
     }
 
-    private void SpeedControl(){
+    void SpeedControl()
+    {
         Vector3 flatVel = new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z);
 
-        if (flatVel.magnitude > moveSpeed) {
+        if (flatVel.magnitude > moveSpeed)
+        {
             Vector3 limitedVel = flatVel.normalized * moveSpeed;
             rb.linearVelocity = new Vector3(limitedVel.x, rb.linearVelocity.y, limitedVel.z);
         }
