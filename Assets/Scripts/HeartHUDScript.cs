@@ -6,31 +6,45 @@ using System.Collections.Generic;
 public class HeartHUD : NetworkBehaviour
 {
     [Header("Heart Settings")]
-    [SerializeField] private GameObject heartPrefab; // UI Image or RawImage prefab for hearts
-    [SerializeField] private Transform heartContainer; // Parent object for hearts
-    [SerializeField] private int maxHearts = 3; // Maximum number of hearts
-    [SerializeField] private Sprite heartSprite; // Only need one sprite now!
+    [SerializeField] private GameObject heartPrefab;
+    [SerializeField] private Transform heartContainer;
+    [SerializeField] private Sprite heartSprite;
     
     [Header("Health Settings")]
+    [SerializeField] private int maxHearts = 3;
+    
     [SyncVar(hook = nameof(OnHealthChanged))]
     private int currentHealth;
     
     private List<Image> heartImages = new List<Image>();
     
-    void Start()
+    // SERVER ONLY: Initialize health when spawned on server
+    public override void OnStartServer()
     {
-        // Only create UI for local player
+        base.OnStartServer();
+        // Server initializes the authoritative health value
+        currentHealth = maxHearts;
+    }
+    
+    // CLIENT ONLY: Setup UI for local player
+    public override void OnStartLocalPlayer()
+    {
+        base.OnStartLocalPlayer();
+        // Local player sets up their UI
+        InitializeHearts();
+    }
+    
+    // Called on non-local player clients when they see this player spawn
+    public override void OnStartClient()
+    {
+        base.OnStartClient();
+        
+        // Disable canvas for non-local players
         if (!isLocalPlayer)
         {
-            // Disable canvas for non-local players
             Canvas canvas = GetComponentInChildren<Canvas>();
             if (canvas != null) canvas.enabled = false;
-            return;
         }
-        
-        // Initialize health to max
-        currentHealth = maxHearts;
-        InitializeHearts();
     }
     
     void InitializeHearts()
@@ -45,69 +59,85 @@ public class HeartHUD : NetworkBehaviour
         // Create heart UI elements based on current health
         for (int i = 0; i < currentHealth; i++)
         {
-            GameObject heartObj = Instantiate(heartPrefab, heartContainer);
-            Image heartImage = heartObj.GetComponent<Image>();
-            if (heartImage != null && heartSprite != null)
-            {
-                heartImage.sprite = heartSprite;
-            }
-            heartImages.Add(heartImage);
+            CreateHeart();
         }
     }
     
+    void CreateHeart()
+    {
+        GameObject heartObj = Instantiate(heartPrefab, heartContainer);
+        Image heartImage = heartObj.GetComponent<Image>();
+        if (heartImage != null && heartSprite != null)
+        {
+            heartImage.sprite = heartSprite;
+        }
+        heartImages.Add(heartImage);
+    }
+    
+    // Hook called whenever currentHealth changes (on clients)
     void OnHealthChanged(int oldHealth, int newHealth)
     {
+        // Only update UI for local player
         if (!isLocalPlayer) return;
+        
         UpdateHeartDisplay();
     }
     
     void UpdateHeartDisplay()
     {
-        // If we have more hearts than needed, remove extras
+        // Remove excess hearts
         while (heartImages.Count > currentHealth)
         {
             int lastIndex = heartImages.Count - 1;
-            Destroy(heartImages[lastIndex].gameObject);
+            if (heartImages[lastIndex] != null)
+            {
+                Destroy(heartImages[lastIndex].gameObject);
+            }
             heartImages.RemoveAt(lastIndex);
         }
         
-        // If we need more hearts (healing), add them
+        // Add missing hearts
         while (heartImages.Count < currentHealth)
         {
-            GameObject heartObj = Instantiate(heartPrefab, heartContainer);
-            Image heartImage = heartObj.GetComponent<Image>();
-            if (heartImage != null && heartSprite != null)
-            {
-                heartImage.sprite = heartSprite;
-            }
-            heartImages.Add(heartImage);
+            CreateHeart();
         }
     }
     
-    // Call this to take damage
+    // CLIENT calls this, SERVER executes it
     [Command]
     public void CmdTakeDamage(int damage)
     {
+        // Server updates authoritative health value
         currentHealth = Mathf.Max(0, currentHealth - damage);
     }
     
-    // Call this to heal
+    // CLIENT calls this, SERVER executes it
     [Command]
     public void CmdHeal(int amount)
     {
+        // Server updates authoritative health value
         currentHealth = Mathf.Min(maxHearts, currentHealth + amount);
     }
     
-    // Public method to set max hearts (for upgrades)
+    // CLIENT calls this, SERVER executes it
     [Command]
     public void CmdSetMaxHearts(int newMax)
     {
+        // Server updates max hearts
         maxHearts = newMax;
-        if (isLocalPlayer)
-        {
-            InitializeHearts();
-            currentHealth = Mathf.Min(currentHealth, maxHearts);
-            UpdateHeartDisplay();
-        }
+        // Clamp current health to new max
+        currentHealth = Mathf.Min(currentHealth, maxHearts);
+        // The SyncVar hook will handle updating the client UI
+    }
+    
+    // Public method to get current health (read-only for gameplay logic)
+    public int GetCurrentHealth()
+    {
+        return currentHealth;
+    }
+    
+    public int GetMaxHearts()
+    {
+        return maxHearts;
     }
 }
