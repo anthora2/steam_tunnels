@@ -9,10 +9,11 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6902534888765376183}
-  - component: {fileID: 6902534888765376180}
+  - component: {fileID: -9053734633380429206}
   - component: {fileID: 6712455278405722842}
+  - component: {fileID: -9112539081472246866}
   m_Layer: 0
-  m_Name: NetworkManager
+  m_Name: CustomNetworkManager
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -33,7 +34,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &6902534888765376180
+--- !u!114 &-9053734633380429206
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -42,14 +43,14 @@ MonoBehaviour:
   m_GameObject: {fileID: 6902534888765376181}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8aab4c8111b7c411b9b92cf3dbc5bd4e, type: 3}
+  m_Script: {fileID: 11500000, guid: 77bbd24cfad3ce94eac2aae28a97692c, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier: Assembly-CSharp::MyNetworkManager
   dontDestroyOnLoad: 0
   runInBackground: 1
   headlessStartMode: 1
   editorAutoStart: 0
-  sendRate: 20
+  sendRate: 60
   offlineScene: 
   onlineScene: 
   offlineSceneLoadDelay: 0
@@ -59,11 +60,11 @@ MonoBehaviour:
   disconnectInactiveConnections: 0
   disconnectInactiveTimeout: 60
   authenticator: {fileID: 0}
-  playerPrefab: {fileID: 388937345275023605, guid: fc40b1557a4729e4e9cfaad99e1097ff, type: 3}
+  playerPrefab: {fileID: 6044138289849773725, guid: 328fce4ab4d74d74ebff5d28a08882f1, type: 3}
   autoCreatePlayer: 1
   playerSpawnMethod: 0
   spawnPrefabs:
-  - {fileID: 1088283708022409550, guid: 56028ba785354474b97517c7242d8c16, type: 3}
+  - {fileID: 2033722073429076286, guid: ad4142bb5ad9c68489d8cd3a94148a95, type: 3}
   exceptionsDisconnect: 1
   snapshotSettings:
     bufferTimeMultiplier: 2
@@ -79,6 +80,11 @@ MonoBehaviour:
   evaluationMethod: 0
   evaluationInterval: 3
   timeInterpolationGui: 0
+  pickupPrefab: {fileID: 2033722073429076286, guid: ad4142bb5ad9c68489d8cd3a94148a95, type: 3}
+  numberOfPickups: 10
+  planeCenter: {x: 92.99, y: 0.24, z: 456.6}
+  spawnAreaSize: {x: 20, y: 0, z: 20}
+  spawnHeightOffset: 1.5
 --- !u!114 &6712455278405722842
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -108,3 +114,17 @@ MonoBehaviour:
   debugLog: 0
   statisticsGUI: 0
   statisticsLog: 0
+--- !u!114 &-9112539081472246866
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6902534888765376181}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6442dc8070ceb41f094e44de0bf87274, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mirror::Mirror.NetworkManagerHUD
+  offsetX: 0
+  offsetY: 0
