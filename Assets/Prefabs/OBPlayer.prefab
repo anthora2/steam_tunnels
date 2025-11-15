@@ -434,15 +434,26 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0a6a90f051cfe6c4bb07f6d2dc28b25c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TargetingDebug
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
   whatIsGround:
     serializedVersion: 2
     m_Bits: 1024
+  targetLayers:
+    serializedVersion: 2
+    m_Bits: 512
   maxDistance: 50
   radius: 2
   height: 8
   bookObject: {fileID: 5359851090399119235}
   bookOffset: {x: 0.3, y: -0.2, z: 0.5}
   bookScale: 1
+  cylinderMaterial: {fileID: 0}
+  cylinderColor: {r: 0.6556604, g: 1, b: 0.9879935, a: 0.39607844}
+  lightningPrefab: {fileID: 0}
+  lightningDuration: 1
+  lightningHeight: 0.1
 --- !u!1 &3594065374125335022
 GameObject:
   m_ObjectHideFlags: 0

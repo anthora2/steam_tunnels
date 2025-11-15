@@ -6,7 +6,7 @@ public class TargetingDebug : NetworkBehaviour
 {
     [Header("Targeting Settings")]
     public LayerMask whatIsGround;
-    public LayerMask targetLayers; // What can be targeted (enemies, objects, etc.)
+    public LayerMask targetLayers;
     public float maxDistance = 50f;
     public float radius = 2f;
     public float height = 8f;
@@ -17,8 +17,13 @@ public class TargetingDebug : NetworkBehaviour
     public float bookScale = 1f;
     
     [Header("Visual Settings")]
-    public Material cylinderMaterial; // Assign a transparent material
-    public Color cylinderColor = new Color(0f, 0.6f, 1f, 0.3f);
+    public Material cylinderMaterial;
+    public Color cylinderColor = new Color(0f, 0.6f, 1f, 0.15f);
+    
+    [Header("Lightning Settings")]
+    public GameObject lightningPrefab;
+    public float lightningDuration = 1f;
+    public float lightningHeight = 0.1f;
     
     private Camera cam;
     private Vector3 hitPoint;
@@ -27,23 +32,20 @@ public class TargetingDebug : NetworkBehaviour
     [SyncVar(hook = nameof(OnAimingModeChanged))]
     private bool aimingMode = false;
     
-    // Visual cylinder object (local player only)
     private GameObject targetingCylinder;
     private Renderer cylinderRenderer;
-    
-    // Collision tracking
+    private GameObject edgeRing;
+    private LineRenderer ringLineRenderer;
     private List<Collider> detectedTargets = new List<Collider>();
+    private List<Collider> previousTargets = new List<Collider>();
     
     void Start()
     {
-        // Only setup visuals for local player
         if (!isLocalPlayer)
         {
-            // Non-local players just need to respond to SyncVar changes
             return;
         }
         
-        // Find camera (local player only)
         cam = GetComponentInChildren<Camera>();
         if (cam == null)
             cam = Camera.main;
@@ -53,108 +55,143 @@ public class TargetingDebug : NetworkBehaviour
             return;
         }
         
-        // Validate book setup
         if (bookObject == null)
         {
             Debug.LogError("TargetingDebug: Book Object not assigned in Inspector!");
             return;
         }
         
-        // Check if book has a renderer
         Renderer bookRenderer = bookObject.GetComponentInChildren<Renderer>();
         if (bookRenderer == null)
         {
             Debug.LogWarning("TargetingDebug: Book has no Renderer component!");
         }
         
-        // Book starts hidden
         bookObject.SetActive(false);
-        
-        // Create targeting cylinder (local player only sees this)
         CreateTargetingCylinder();
+        CreateEdgeRing();
         
         Debug.Log($"TargetingDebug initialized for local player. Camera: {cam.name}, Book: {bookObject.name}");
     }
     
-    // Hook called when aimingMode changes on any client
     void OnAimingModeChanged(bool oldValue, bool newValue)
     {
-        // Update book visibility for ALL clients
         if (bookObject != null)
         {
             bookObject.SetActive(newValue);
         }
         
-        // Update cylinder visibility (local player only)
         if (isLocalPlayer && targetingCylinder != null)
         {
             targetingCylinder.SetActive(newValue);
+        }
+        
+        if (isLocalPlayer && edgeRing != null)
+        {
+            edgeRing.SetActive(newValue);
         }
     }
     
     void CreateTargetingCylinder()
     {
-        // Create cylinder GameObject
         targetingCylinder = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         targetingCylinder.name = "TargetingCylinder";
         
-        // Remove collider (we don't want it to physically interact)
         Collider col = targetingCylinder.GetComponent<Collider>();
         if (col != null) Destroy(col);
         
-        // Setup renderer
         cylinderRenderer = targetingCylinder.GetComponent<Renderer>();
         
-        // Use provided material or create a transparent one
         if (cylinderMaterial != null)
         {
             cylinderRenderer.material = cylinderMaterial;
         }
         else
         {
-            // Create a basic transparent material
-            Material mat = new Material(Shader.Find("Standard"));
-            mat.color = cylinderColor;
-            // Make it transparent
-            mat.SetFloat("_Mode", 3); // Transparent mode
-            mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-            mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-            mat.SetInt("_ZWrite", 0);
-            mat.DisableKeyword("_ALPHATEST_ON");
-            mat.EnableKeyword("_ALPHABLEND_ON");
-            mat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
-            mat.renderQueue = 3000;
-            cylinderRenderer.material = mat;
+            Shader shader = Shader.Find("Universal Render Pipeline/Lit");
+            if (shader == null)
+                shader = Shader.Find("Standard");
+            
+            if (shader != null)
+            {
+                Material mat = new Material(shader);
+                mat.color = cylinderColor;
+                
+                if (shader.name.Contains("Universal"))
+                {
+                    mat.SetFloat("_Surface", 1);
+                    mat.SetFloat("_Blend", 0);
+                    mat.SetFloat("_AlphaClip", 0);
+                    mat.SetFloat("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                    mat.SetFloat("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                    mat.SetFloat("_ZWrite", 0);
+                    mat.renderQueue = 3000;
+                    mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                    mat.EnableKeyword("_ALPHABLEND_ON");
+                }
+                else
+                {
+                    mat.SetFloat("_Mode", 3);
+                    mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                    mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                    mat.SetInt("_ZWrite", 0);
+                    mat.DisableKeyword("_ALPHATEST_ON");
+                    mat.EnableKeyword("_ALPHABLEND_ON");
+                    mat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+                    mat.renderQueue = 3000;
+                }
+                
+                cylinderRenderer.material = mat;
+            }
+            else
+            {
+                Debug.LogWarning("Could not find shader for transparent material. Cylinder may appear pink.");
+            }
         }
         
-        // Start hidden
         targetingCylinder.SetActive(false);
+    }
+    
+    void CreateEdgeRing()
+    {
+        edgeRing = new GameObject("TargetingEdgeRing");
+        ringLineRenderer = edgeRing.AddComponent<LineRenderer>();
+        
+        ringLineRenderer.startWidth = 0.1f;
+        ringLineRenderer.endWidth = 0.1f;
+        ringLineRenderer.loop = true;
+        ringLineRenderer.useWorldSpace = true;
+        ringLineRenderer.positionCount = 64;
+        
+        Material lineMat = new Material(Shader.Find("Sprites/Default"));
+        lineMat.color = new Color(0f, 0.8f, 1f, 1f);
+        ringLineRenderer.material = lineMat;
+        
+        edgeRing.SetActive(false);
     }
     
     void Update()
     {
-        // Only local player can control aiming
         if (!isLocalPlayer) return;
         
         if (cam == null || bookObject == null) return;
         
-        // ---- TOGGLE AIM MODE ----
         if (Input.GetKeyDown(KeyCode.LeftShift))
         {
-            // Call command to update on server (which syncs to all clients)
             CmdSetAimingMode(!aimingMode);
-            
             Debug.Log($"Shift pressed! Requesting aiming mode: {!aimingMode}");
         }
         
-        // If not aiming, stop here
         if (!aimingMode)
             return;
         
-        // ---- POSITION BOOK RELATIVE TO CAMERA ----
+        if (Input.GetMouseButtonDown(0))
+        {
+            SpawnLightning();
+        }
+        
         UpdateBookPosition();
         
-        // ---- RAYCAST FOR TARGETING ----
         Ray ray = new Ray(cam.transform.position, cam.transform.forward);
         RaycastHit hit;
         
@@ -162,11 +199,8 @@ public class TargetingDebug : NetworkBehaviour
         {
             hitPoint = hit.point;
             hasHit = true;
-            
-            // Update cylinder position and scale
             UpdateCylinderVisual();
-            
-            // Detect targets in the area
+            UpdateEdgeRing();
             DetectTargets();
         }
         else
@@ -174,25 +208,23 @@ public class TargetingDebug : NetworkBehaviour
             hasHit = false;
             if (targetingCylinder != null)
                 targetingCylinder.SetActive(false);
+            if (edgeRing != null)
+                edgeRing.SetActive(false);
         }
     }
     
-    // Command: Client requests to change aiming mode, server updates it
     [Command]
     void CmdSetAimingMode(bool newMode)
     {
         aimingMode = newMode;
-        // SyncVar automatically sends this to all clients
     }
     
     void UpdateBookPosition()
     {
         if (bookObject == null) return;
         
-        // Set scale
         bookObject.transform.localScale = Vector3.one * bookScale;
         
-        // If book is child of camera, just use local position
         if (bookObject.transform.parent == cam.transform)
         {
             bookObject.transform.localPosition = bookOffset;
@@ -200,16 +232,12 @@ public class TargetingDebug : NetworkBehaviour
         }
         else
         {
-            // Fallback: position in world space relative to camera
             bookObject.transform.position = cam.transform.position + cam.transform.TransformDirection(bookOffset);
             bookObject.transform.rotation = cam.transform.rotation;
         }
         
-        // Optional: Make book float slightly for effect
         float floatOffset = Mathf.Sin(Time.time * 2f) * 0.05f;
         bookObject.transform.localPosition += Vector3.up * floatOffset;
-        
-        // Optional: Rotate book slowly
         bookObject.transform.Rotate(Vector3.up, 30f * Time.deltaTime, Space.Self);
     }
     
@@ -217,64 +245,129 @@ public class TargetingDebug : NetworkBehaviour
     {
         if (targetingCylinder == null) return;
         
-        // Position at hitpoint, centered vertically
         Vector3 cylinderPos = hitPoint + Vector3.up * (height / 2f);
         targetingCylinder.transform.position = cylinderPos;
-        
-        // Scale to match radius and height
-        // Unity cylinder default is 2 units tall, 1 unit diameter
         targetingCylinder.transform.localScale = new Vector3(radius * 2f, height / 2f, radius * 2f);
         
-        // Make sure it's visible
         if (!targetingCylinder.activeSelf)
             targetingCylinder.SetActive(true);
     }
     
+    void UpdateEdgeRing()
+    {
+        if (ringLineRenderer == null || !hasHit) return;
+        
+        int segments = ringLineRenderer.positionCount;
+        float angleStep = 360f / segments;
+        
+        for (int i = 0; i < segments; i++)
+        {
+            float angle = i * angleStep * Mathf.Deg2Rad;
+            float x = Mathf.Cos(angle) * radius;
+            float z = Mathf.Sin(angle) * radius;
+            Vector3 point = hitPoint + new Vector3(x, 0.05f, z);
+            ringLineRenderer.SetPosition(i, point);
+        }
+        
+        if (!edgeRing.activeSelf && aimingMode)
+            edgeRing.SetActive(true);
+        else if (!aimingMode && edgeRing.activeSelf)
+            edgeRing.SetActive(false);
+    }
+    
     void DetectTargets()
     {
-        // Clear previous detections
+        previousTargets.Clear();
+        previousTargets.AddRange(detectedTargets);
         detectedTargets.Clear();
         
-        // Define capsule for overlap check
-        Vector3 point1 = hitPoint; // Bottom of capsule
-        Vector3 point2 = hitPoint + Vector3.up * height; // Top of capsule
+        Vector3 point1 = hitPoint;
+        Vector3 point2 = hitPoint + Vector3.up * height;
         
-        // Find all colliders in the capsule area
         Collider[] hits = Physics.OverlapCapsule(point1, point2, radius, targetLayers);
         
         if (hits.Length > 0)
         {
-            Debug.Log($"=== Detected {hits.Length} targets ===");
             foreach (Collider hit in hits)
             {
                 detectedTargets.Add(hit);
                 
-                // Log what we found
-                Debug.Log($"Target: {hit.gameObject.name} | Tag: {hit.tag} | Layer: {LayerMask.LayerToName(hit.gameObject.layer)}");
+                if (!previousTargets.Contains(hit))
+                {
+                    Debug.Log($"🎯 <color=green>TARGET ENTERED</color>: {hit.gameObject.name}");
+                    LogTargetDetails(hit);
+                }
+            }
+            
+            if (Time.frameCount % 60 == 0)
+            {
+                Debug.Log($"╔══════════════════════════════════════════╗");
+                Debug.Log($"║  {hits.Length} TARGET(S) IN AREA");
+                Debug.Log($"╚══════════════════════════════════════════╝");
                 
-                // You can add more detailed info here
-                // For example, check if it has specific components:
-                if (hit.GetComponent<Rigidbody>())
-                    Debug.Log($"  - Has Rigidbody");
-                
-                // Check for enemy scripts, health components, etc.
-                // Example: var enemy = hit.GetComponent<EnemyHealth>();
+                for (int i = 0; i < hits.Length; i++)
+                {
+                    Debug.Log($"[{i + 1}] {hits[i].gameObject.name}");
+                }
+            }
+        }
+        
+        foreach (Collider previousTarget in previousTargets)
+        {
+            if (previousTarget != null && !detectedTargets.Contains(previousTarget))
+            {
+                Debug.Log($"🚫 <color=red>TARGET LEFT</color>: {previousTarget.gameObject.name}");
             }
         }
     }
     
-    // Public method to get currently detected targets (for other scripts to use)
+    void LogTargetDetails(Collider hit)
+    {
+        Debug.Log($"    └─ Tag: '{hit.tag}'");
+        Debug.Log($"    └─ Layer: {LayerMask.LayerToName(hit.gameObject.layer)}");
+        Debug.Log($"    └─ Position: {hit.transform.position}");
+        
+        if (hit.GetComponent<Rigidbody>())
+            Debug.Log($"    └─ ✓ Has Rigidbody");
+        
+        var netIdentity = hit.GetComponent<Mirror.NetworkIdentity>();
+        if (netIdentity != null)
+            Debug.Log($"    └─ ✓ Network Object (NetID: {netIdentity.netId})");
+        
+        float distanceFromCenter = Vector3.Distance(hit.transform.position, hitPoint);
+        Debug.Log($"    └─ Distance from center: {distanceFromCenter:F2}m");
+    }
+    
     public List<Collider> GetDetectedTargets()
     {
         return detectedTargets;
     }
     
-    // Optional: Draw debug visualization in Scene view
+    void SpawnLightning()
+    {
+        if (!hasHit || lightningPrefab == null)
+        {
+            Debug.LogWarning("Cannot spawn lightning: No valid target or prefab not assigned");
+            return;
+        }
+        
+        Vector3 spawnPosition = hitPoint + Vector3.up * lightningHeight;
+        GameObject lightning = Instantiate(lightningPrefab, spawnPosition, Quaternion.identity);
+        lightning.transform.localScale = Vector3.one * 2f;
+        Destroy(lightning, lightningDuration);
+        
+        Debug.Log($"⚡ Lightning spawned at {spawnPosition}");
+        
+        if (detectedTargets.Count > 0)
+        {
+            Debug.Log($"⚡ Lightning struck {detectedTargets.Count} target(s)!");
+        }
+    }
+    
     private void OnDrawGizmos()
     {
         if (!aimingMode || !hasHit) return;
         
-        // Draw floor circle outline
         Gizmos.color = new Color(0f, 0.8f, 1f, 1f);
         const int segments = 32;
         float angleStep = 360f / segments;
@@ -292,14 +385,12 @@ public class TargetingDebug : NetworkBehaviour
             prevPoint = nextPoint;
         }
         
-        // Draw camera ray
         if (cam != null)
         {
             Gizmos.color = Color.yellow;
             Gizmos.DrawRay(cam.transform.position, cam.transform.forward * maxDistance);
         }
         
-        // Draw detected targets
         Gizmos.color = Color.red;
         foreach (Collider target in detectedTargets)
         {
@@ -310,8 +401,9 @@ public class TargetingDebug : NetworkBehaviour
     
     void OnDestroy()
     {
-        // Clean up cylinder when this script is destroyed
         if (targetingCylinder != null)
             Destroy(targetingCylinder);
+        if (edgeRing != null)
+            Destroy(edgeRing);
     }
 }
