@@ -69,14 +69,7 @@ public class HotbarSlotUI : MonoBehaviour
 
             if (quantityText != null)
             {
-                if (slot.quantity > 1 || slot.item.stackable)
-                {
-                    quantityText.text = slot.quantity > 1 ? slot.quantity.ToString() : "";
-                }
-                else
-                {
-                    quantityText.text = "";
-                }
+                quantityText.text = "";
             }
         }
 

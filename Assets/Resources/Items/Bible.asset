@@ -9,11 +9,11 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e4a42b24c30dc4f5ba2f23f912d7c857, type: 3}
-  m_Name: New Item
+  m_Script: {fileID: 11500000, guid: d3262354bec6242e4895e46551442623, type: 3}
+  m_Name: Bible
   m_EditorClassIdentifier: Assembly-CSharp::Item
-  ItemName: Wrench
-  ItemIcon: {fileID: 0}
-  IsStackable: 0
-  MaxStackSize: 0
-  Weight: 5
+  itemName: Bible
+  itemSprite: {fileID: 21300000, guid: 2edcebf98a1f94f40ad6de0689569bad, type: 3}
+  stackable: 0
+  maxStackSize: 0
+  weight: 0
