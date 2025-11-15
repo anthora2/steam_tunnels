@@ -247,7 +247,7 @@ GameObject:
   - component: {fileID: 2140576825590362162}
   m_Layer: 0
   m_Name: CameraHolder
-  m_TagString: Untagged
+  m_TagString: MainCamera
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -451,9 +451,10 @@ MonoBehaviour:
   bookScale: 1
   cylinderMaterial: {fileID: 0}
   cylinderColor: {r: 0.6556604, g: 1, b: 0.9879935, a: 0.39607844}
-  lightningPrefab: {fileID: 0}
-  lightningDuration: 1
+  lightningPrefab: {fileID: 3264017919857572370, guid: addddcf31f46e44408d340dbc1161384, type: 3}
+  lightningDuration: 0.1
   lightningHeight: 0.1
+  lightningLight: {fileID: 0}
 --- !u!1 &3594065374125335022
 GameObject:
   m_ObjectHideFlags: 0
@@ -470,7 +471,7 @@ GameObject:
   - component: {fileID: 6731361430740102867}
   m_Layer: 0
   m_Name: PlayerCamera
-  m_TagString: Untagged
+  m_TagString: MainCamera
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0

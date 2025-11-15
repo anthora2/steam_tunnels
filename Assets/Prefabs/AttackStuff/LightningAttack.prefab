@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 1012111918088702868}
   - component: {fileID: 1318920552886585888}
   - component: {fileID: 1364428660166546433}
+  - component: {fileID: 1900198299887000119}
   m_Layer: 0
   m_Name: LightningAttack
   m_TagString: Untagged
@@ -112,3 +113,20 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &1900198299887000119
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3264017919857572370}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e1d1fd6afaec2ef4fbb04aa4e3371fba, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Billboard
+  targetCamera: {fileID: 0}
+  lockX: 0
+  lockY: 0
+  lockZ: 0
+  billboardType: 0

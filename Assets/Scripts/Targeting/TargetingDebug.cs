@@ -24,6 +24,7 @@ public class TargetingDebug : NetworkBehaviour
     public GameObject lightningPrefab;
     public float lightningDuration = 1f;
     public float lightningHeight = 0.1f;
+    public Light lightningLight; // Optional: light component for flash effect
     
     private Camera cam;
     private Vector3 hitPoint;
@@ -353,7 +354,7 @@ public class TargetingDebug : NetworkBehaviour
         
         Vector3 spawnPosition = hitPoint + Vector3.up * lightningHeight;
         GameObject lightning = Instantiate(lightningPrefab, spawnPosition, Quaternion.identity);
-        lightning.transform.localScale = Vector3.one * 2f;
+        lightning.transform.localScale = Vector3.one * 15f;
         Destroy(lightning, lightningDuration);
         
         Debug.Log($"⚡ Lightning spawned at {spawnPosition}");
