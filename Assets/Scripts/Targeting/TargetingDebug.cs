@@ -22,9 +22,8 @@ public class TargetingDebug : NetworkBehaviour
     
     [Header("Lightning Settings")]
     public GameObject lightningPrefab;
-    public float lightningDuration = 1f;
+    public float lightningDuration = 0.3f;
     public float lightningHeight = 0.1f;
-    public Light lightningLight; // Optional: light component for flash effect
     
     private Camera cam;
     private Vector3 hitPoint;
@@ -188,7 +187,8 @@ public class TargetingDebug : NetworkBehaviour
         
         if (Input.GetMouseButtonDown(0))
         {
-            SpawnLightning();
+            // Call command to spawn lightning on all clients
+            CmdSpawnLightning(hitPoint);
         }
         
         UpdateBookPosition();
@@ -344,24 +344,52 @@ public class TargetingDebug : NetworkBehaviour
         return detectedTargets;
     }
     
-    void SpawnLightning()
+    // Command: Client sends spawn request to server
+    [Command]
+    void CmdSpawnLightning(Vector3 position)
     {
-        if (!hasHit || lightningPrefab == null)
+        // Server tells all clients to spawn lightning
+        RpcSpawnLightning(position);
+    }
+    
+    // ClientRpc: All clients spawn lightning at the same position
+    [ClientRpc]
+    void RpcSpawnLightning(Vector3 position)
+    {
+        SpawnLightningLocal(position);
+    }
+    
+    void SpawnLightningLocal(Vector3 position)
+    {
+        if (lightningPrefab == null)
         {
-            Debug.LogWarning("Cannot spawn lightning: No valid target or prefab not assigned");
+            Debug.LogWarning("Cannot spawn lightning: Prefab not assigned");
             return;
         }
         
-        Vector3 spawnPosition = hitPoint + Vector3.up * lightningHeight;
+        Vector3 spawnPosition = position + Vector3.up * lightningHeight;
         GameObject lightning = Instantiate(lightningPrefab, spawnPosition, Quaternion.identity);
         lightning.transform.localScale = Vector3.one * 15f;
+        
+        // Manually assign camera to billboard
+        Billboard billboard = lightning.GetComponent<Billboard>();
+        if (billboard != null && cam != null)
+        {
+            billboard.targetCamera = cam;
+        }
+        
+        // Destroy after duration
         Destroy(lightning, lightningDuration);
         
-        Debug.Log($"⚡ Lightning spawned at {spawnPosition}");
-        
-        if (detectedTargets.Count > 0)
+        // Only log on local player
+        if (isLocalPlayer)
         {
-            Debug.Log($"⚡ Lightning struck {detectedTargets.Count} target(s)!");
+            Debug.Log($"⚡ Lightning spawned at {spawnPosition}");
+            
+            if (detectedTargets.Count > 0)
+            {
+                Debug.Log($"⚡ Lightning struck {detectedTargets.Count} target(s)!");
+            }
         }
     }
     
