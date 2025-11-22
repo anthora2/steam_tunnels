@@ -1,7 +1,8 @@
 using UnityEngine;
 
 /// <summary>
-/// Simple container for an item in the inventory (used by UI)
+/// Simple container for an item in the inventory (used by UI).
+/// Contains the Item ScriptableObject reference from ItemDatabase.
 /// </summary>
 [System.Serializable]
 public class InventorySlot
@@ -15,4 +16,3 @@ public class InventorySlot
 
     public bool IsEmpty => item == null;
 }
-

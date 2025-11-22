@@ -4,8 +4,9 @@ using UnityEngine;
 public class MyNetworkManager : NetworkManager
 {
     [Header("Spawn Settings")]
-    public GameObject pickupPrefab;
-    public int numberOfPickups = 10;
+    public GameObject biblePrefab;
+    public GameObject crossPrefab;
+    public int numberOfItems = 5;
     
     [Header("Spawn Position")]
     public Vector3 planeCenter = new Vector3(92.99f, 0.24f, 456.6f); // Plane center position
@@ -17,7 +18,7 @@ public class MyNetworkManager : NetworkManager
         base.OnStartServer();
         
         // Spawn pickups when server starts
-        SpawnInitialPickups();
+        SpawnInitialItems();
     }
     
     public override void OnServerAddPlayer(NetworkConnectionToClient conn)
@@ -36,15 +37,24 @@ public class MyNetworkManager : NetworkManager
         NetworkServer.AddPlayerForConnection(conn, player);
     }
     
-    void SpawnInitialPickups()
+    void SpawnInitialItems()
     {
-        for (int i = 0; i < numberOfPickups; i++)
+        for (int i = 0; i < numberOfItems; i++)
         {
             Vector3 position = GetRandomSpawnPosition();
             
-            GameObject pickup = Instantiate(pickupPrefab, position, Quaternion.identity);
-            NetworkServer.Spawn(pickup);
-            Debug.Log($"Spawned pickup at {position}");
+            GameObject item = Instantiate(biblePrefab, position, Quaternion.identity);
+            NetworkServer.Spawn(item);
+            Debug.Log($"Spawned item at {position}");
+        }
+
+        for (int i = 0; i < numberOfItems; i++)
+        {
+            Vector3 position = GetRandomSpawnPosition();
+            
+            GameObject item = Instantiate(crossPrefab, position, Quaternion.identity);
+            NetworkServer.Spawn(item);
+            Debug.Log($"Spawned item at {position}");
         }
     }
     

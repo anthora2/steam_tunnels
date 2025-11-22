@@ -8,7 +8,6 @@ public class HotbarSlotUI : MonoBehaviour
     [Header("UI References")]
     [SerializeField] private Image itemImage;
     [SerializeField] private Image backgroundImage;
-    [SerializeField] private TextMeshProUGUI quantityText;
     [SerializeField] private GameObject selectedIndicator;
 
     [Header("Visual Settings")]
@@ -45,11 +44,6 @@ public class HotbarSlotUI : MonoBehaviour
                     itemImage.enabled = false;
                 }
             }
-
-            if (quantityText != null)
-            {
-                quantityText.text = "";
-            }
         }
         else 
         {
@@ -65,11 +59,6 @@ public class HotbarSlotUI : MonoBehaviour
                 {
                     itemImage.enabled = false;
                 }
-            }
-
-            if (quantityText != null)
-            {
-                quantityText.text = "";
             }
         }
 

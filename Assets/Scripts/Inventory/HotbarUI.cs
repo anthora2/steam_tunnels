@@ -2,141 +2,81 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System.Collections.Generic;
-using System.Linq;
 using Mirror;
 
-/// <summary>
-/// Hotbar UI that displays and manages the player's inventory items
-/// </summary>
+/*
+Hotbar UI component that displays the first few items from the local player's inventory.
+Uses ItemDatabase to look up item icons and metadata.
+Only displays for the local player.
+*/
 public class HotbarUI : MonoBehaviour
 {
-    [Header("Inventory Reference")]
-    [SerializeField] private PlayerInventory playerInventory;
+    private const int HOTBAR_SIZE = 5;
 
     [Header("UI References")]
+    [SerializeField] private Inventory inventory;
+    [SerializeField] private ItemDatabase itemDatabase;
     [SerializeField] private GameObject hotbarPanel;
     [SerializeField] private Transform hotbarSlotsContainer;
     [SerializeField] private GameObject slotPrefab;
 
     [Header("Hotbar Settings")]
-    [SerializeField] private int hotbarSize = 5;
     [SerializeField] private KeyCode[] hotbarKeys = new KeyCode[] 
     { KeyCode.Alpha1, KeyCode.Alpha2, KeyCode.Alpha3, KeyCode.Alpha4, KeyCode.Alpha5 };
 
     private HotbarSlotUI[] hotbarSlots;
     private int selectedSlotIndex = 0;
-    private List<string> currentItems = new List<string>();
+    private List<InventoryItemData> currentItems = new List<InventoryItemData>();
     
-    // Item database to resolve item names to Item ScriptableObjects
-    private static Dictionary<string, Item> itemDatabase;
-    private static bool databaseInitialized = false;
-
     private void Start()
     {
-        InitializeItemDatabase();
-        ConnectToInventory();
+        // Initialize ItemDatabase if assigned
+        if (itemDatabase != null)
+        {
+            itemDatabase.Initialize();
+        }
+        else
+        {
+            Debug.LogError("[HotbarUI] ItemDatabase not assigned!");
+        }
+
         InitializeHotbar();
-    }
-
-    private void ConnectToInventory()
-    {
-        // If inventory is already assigned in inspector, use it
-        if (playerInventory != null)
-        {
-            SubscribeToInventory();
-            return;
-        }
-
-        // Otherwise, try to find it (fallback for runtime assignment)
-        TryFindInventory();
-        InvokeRepeating(nameof(TryFindInventory), 0.5f, 1f);
-    }
-
-    private void SubscribeToInventory()
-    {
-        if (playerInventory == null) return;
-
-        playerInventory.OnInventoryChanged += OnInventoryChanged;
-        Debug.Log("[HotbarUI] Subscribed to player inventory OnInventoryChanged event");
         
-        // Request current inventory state if available
-        playerInventory.SendCachedInventory();
+        // Subscribe to inventory changes if inventory is already assigned
+        // Otherwise, UIManager will subscribe after binding
+        if (inventory != null)
+        {
+            inventory.OnInventoryChanged += OnInventoryChanged;
+            Debug.Log("[HotbarUI] Subscribed to inventory changes in Start()");
+        }
     }
 
-    private void TryFindInventory()
+    public void BindInventory(Inventory inventory)
     {
-        if (playerInventory != null) 
-        {
-            // Already found, cancel repeating invoke and subscribe
-            CancelInvoke(nameof(TryFindInventory));
-            SubscribeToInventory();
-            return;
-        }
-
-        // Find local player's inventory
-        NetworkIdentity[] allPlayers = FindObjectsOfType<NetworkIdentity>();
-        foreach (NetworkIdentity player in allPlayers)
-        {
-            if (player.isLocalPlayer)
-            {
-                PlayerInventory inv = player.GetComponent<PlayerInventory>();
-                if (inv != null)
-                {
-                    playerInventory = inv;
-                    CancelInvoke(nameof(TryFindInventory));
-                    SubscribeToInventory();
-                    return;
-                }
-            }
-        }
+        this.inventory = inventory;
+        inventory.OnInventoryChanged += OnInventoryChanged;
     }
 
     private void OnDestroy()
     {
-        if (playerInventory != null)
+        // Unsubscribe from inventory changes
+        if (inventory != null)
         {
-            playerInventory.OnInventoryChanged -= OnInventoryChanged;
+            inventory.OnInventoryChanged -= OnInventoryChanged;
         }
-    }
-
-    private void InitializeItemDatabase()
-    {
-        if (databaseInitialized) return;
-
-        itemDatabase = new Dictionary<string, Item>();
-        Item[] allItems = Resources.LoadAll<Item>("Items");
-
-        foreach (Item item in allItems)
-        {
-            if (item != null && !string.IsNullOrEmpty(item.itemName))
-            {
-                itemDatabase[item.itemName] = item;
-            }
-        }
-
-        databaseInitialized = true;
-    }
-
-    private Item GetItemByName(string itemName)
-    {
-        if (string.IsNullOrEmpty(itemName)) return null;
-        itemDatabase.TryGetValue(itemName, out Item item);
-        return item;
-    }
-
-    private void OnInventoryChanged(List<string> items)
-    {
-        Debug.Log($"[HotbarUI] OnInventoryChanged called with {items.Count} items: {string.Join(", ", items)}");
-        currentItems = items;
-        UpdateUI();
     }
 
     private void Update()
     {
-        if (playerInventory == null) return;
+        // Check if this is the local player's inventory by checking the parent NetworkIdentity
+        if (inventory != null)
+        {
+            NetworkIdentity netIdentity = inventory.GetComponent<NetworkIdentity>();
+            if (netIdentity != null && !netIdentity.isLocalPlayer) return;
+        }
 
         // Hotbar selection
-        for (int i = 0; i < hotbarKeys.Length && i < hotbarSize; i++)
+        for (int i = 0; i < hotbarKeys.Length && i < HOTBAR_SIZE; i++)
         {
             if (Input.GetKeyDown(hotbarKeys[i])) 
             {
@@ -151,6 +91,25 @@ public class HotbarUI : MonoBehaviour
         }
     }
 
+    // Called when inventory changes (via TargetRpc from server).
+    // Updates the hotbar UI using ItemDatabase to get item icons.
+    public void OnInventoryChanged(List<InventoryItemData> items)
+    {
+        if (inventory != null)
+        {
+            NetworkIdentity netIdentity = inventory.GetComponent<NetworkIdentity>();
+            if (netIdentity == null || !netIdentity.isLocalPlayer)
+            {
+                Debug.Log("[HotbarUI] Ignoring inventory update - not local player's inventory");
+                return;
+            }
+        }
+        
+        Debug.Log($"[HotbarUI] OnInventoryChanged called with {items.Count} items for local player");
+        currentItems = items;
+        UpdateUI(items);
+    }
+
     private void InitializeHotbar()
     {
         if (hotbarSlotsContainer == null || slotPrefab == null)
@@ -159,8 +118,8 @@ public class HotbarUI : MonoBehaviour
             return;
         }
 
-        hotbarSlots = new HotbarSlotUI[hotbarSize];
-        for (int i = 0; i < hotbarSize; i++)
+        hotbarSlots = new HotbarSlotUI[HOTBAR_SIZE];
+        for (int i = 0; i < HOTBAR_SIZE; i++)
         {
             GameObject slotObject = Instantiate(slotPrefab, hotbarSlotsContainer);
             HotbarSlotUI slotUI = slotObject.GetComponent<HotbarSlotUI>();
@@ -174,7 +133,9 @@ public class HotbarUI : MonoBehaviour
         SelectHotbarSlot(0);
     }
 
-    private void UpdateUI()
+    // Update the hotbar UI with current inventory items
+    // Uses ItemDatabase to look up item data
+    private void UpdateUI(List<InventoryItemData> items)
     {
         if (hotbarSlots == null)
         {
@@ -182,23 +143,30 @@ public class HotbarUI : MonoBehaviour
             return;
         }
 
-        Debug.Log($"[HotbarUI] UpdateUI called with {currentItems.Count} items");
+        if (itemDatabase == null)
+        {
+            Debug.LogError("[HotbarUI] ItemDatabase not assigned!");
+            return;
+        }
 
         // Update all hotbar slots
-        for (int i = 0; i < hotbarSize; i++)
+        for (int i = 0; i < HOTBAR_SIZE; i++)
         {
-            if (i < currentItems.Count)
+            if (i < items.Count && items[i] != null)
             {
-                string itemName = currentItems[i];
-                Item item = GetItemByName(itemName);
+                InventoryItemData itemData = items[i];
+                
+                // Look up the Item ScriptableObject from ItemDatabase
+                Item item = itemDatabase.GetItem(itemData.itemName);
+                
                 if (item != null)
                 {
-                    Debug.Log($"[HotbarUI] Updating slot {i} with item '{item.itemName}' (sprite: {(item.itemSprite != null ? item.itemSprite.name : "null")})");
-                    hotbarSlots[i].UpdateSlot(new InventorySlot(item));
+                    InventorySlot slot = new InventorySlot(item);
+                    hotbarSlots[i].UpdateSlot(slot);
                 }
                 else
                 {
-                    Debug.LogWarning($"[HotbarUI] Could not find item '{itemName}' in database for slot {i}");
+                    Debug.LogWarning($"[HotbarUI] Item '{itemData.itemName}' not found in ItemDatabase!");
                     hotbarSlots[i].ClearSlot();
                 }
             }
@@ -210,18 +178,26 @@ public class HotbarUI : MonoBehaviour
             // Update selection state
             hotbarSlots[i].SetSelected(i == selectedSlotIndex);
         }
+        
+        // This is especially important when multiple clients are present
+        Canvas.ForceUpdateCanvases();
+        
+        // Also force layout rebuild if using layout groups
+        if (hotbarSlotsContainer != null)
+        {
+            UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(hotbarSlotsContainer as RectTransform);
+        }
     }
 
     private void SelectHotbarSlot(int index)
     {
-        if (index < 0 || index >= hotbarSize) return;
+        if (index < 0 || index >= HOTBAR_SIZE) return;
         selectedSlotIndex = index;
-        UpdateUI();
+        UpdateUI(currentItems);
     }
 
     private void UseSelectedItem()
     {
-        // Add validation before checking
         if (currentItems == null || currentItems.Count == 0)
         {
             Debug.Log("[HotbarUI] No items in inventory");
@@ -230,39 +206,34 @@ public class HotbarUI : MonoBehaviour
         
         if (selectedSlotIndex < 0 || selectedSlotIndex >= currentItems.Count)
         {
-            Debug.Log($"[HotbarUI] No item in selected slot {selectedSlotIndex} (inventory has {currentItems.Count} items)");
+            Debug.Log($"[HotbarUI] No item in selected slot {selectedSlotIndex}");
             return;
         }
 
-        string itemName = currentItems[selectedSlotIndex];
-        if (string.IsNullOrEmpty(itemName))
+        InventoryItemData itemData = currentItems[selectedSlotIndex];
+        if (itemData != null && itemDatabase != null)
         {
-            Debug.Log($"[HotbarUI] Selected slot {selectedSlotIndex} has empty item name");
-            return;
-        }
-        
-        Item item = GetItemByName(itemName);
-        
-        if (item != null)
-        {
-            Debug.Log($"[HotbarUI] Using item '{item.itemName}' from hotbar slot {selectedSlotIndex + 1}");
-            item.Use();
-        }
-        else
-        {
-            Debug.LogWarning($"[HotbarUI] Could not find item '{itemName}' in database");
+            Item item = itemDatabase.GetItem(itemData.itemName);
+            if (item != null)
+            {
+                Debug.Log($"[HotbarUI] Using item '{item.itemName}' from hotbar slot {selectedSlotIndex + 1}");
+                item.Use();
+            }
         }
     }
 
     public InventorySlot GetSelectedHotbarSlot()
     {
-        if (selectedSlotIndex >= 0 && selectedSlotIndex < currentItems.Count)
+        if (selectedSlotIndex >= 0 && selectedSlotIndex < currentItems.Count && currentItems[selectedSlotIndex] != null)
         {
-            string itemName = currentItems[selectedSlotIndex];
-            Item item = GetItemByName(itemName);
-            if (item != null)
+            InventoryItemData itemData = currentItems[selectedSlotIndex];
+            if (itemDatabase != null)
             {
-                return new InventorySlot(item);
+                Item item = itemDatabase.GetItem(itemData.itemName);
+                if (item != null)
+                {
+                    return new InventorySlot(item);
+                }
             }
         }
         return null;
@@ -270,7 +241,15 @@ public class HotbarUI : MonoBehaviour
 
     public Item GetSelectedHotbarItem()
     {
-        InventorySlot slot = GetSelectedHotbarSlot();
-        return slot != null ? slot.item : null;
+        if (selectedSlotIndex >= 0 && selectedSlotIndex < currentItems.Count && currentItems[selectedSlotIndex] != null)
+        {
+            InventoryItemData itemData = currentItems[selectedSlotIndex];
+            if (itemDatabase != null)
+            {
+                return itemDatabase.GetItem(itemData.itemName);
+            }
+        }
+        return null;
     }
 }
+
