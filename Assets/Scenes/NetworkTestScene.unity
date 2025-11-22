@@ -395,6 +395,10 @@ PrefabInstance:
       propertyPath: m_ConstrainProportionsScale
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 7732075598084789756, guid: 5a47330002745499c992fd9fbdf8b95b, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: -100
+      objectReference: {fileID: 0}
     - target: {fileID: 8646561935299069524, guid: 5a47330002745499c992fd9fbdf8b95b, type: 3}
       propertyPath: m_Name
       value: PlayerCanvas
