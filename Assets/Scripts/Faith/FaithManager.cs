@@ -7,6 +7,9 @@ public class FaithManager : NetworkBehaviour
 
     // Any UI script (like FaithBarUI) can subscribe to this
     public static event Action<float, float> OnFaithChanged;
+    
+    //if Invocation can be casted
+    public bool canCast = true;
 
     [SyncVar(hook = nameof(OnCurrentFaithChanged))]
     private float currentFaith = 100f;
@@ -47,9 +50,13 @@ public class FaithManager : NetworkBehaviour
         {
             currentFaith -= passiveDrainPerSecond * Time.deltaTime;
             currentFaith = Mathf.Clamp(currentFaith, 0f, maxFaith);
-            Debug.Log(currentFaith);
-            Debug.Log("Above is current faith, should be decreasing");
+            // Debug.Log(currentFaith);
+            // Debug.Log("Above is current faith, should be decreasing");
         }
+    }
+
+    public float GetCurrentFaith() {
+        return currentFaith;
     }
 
 
@@ -93,6 +100,7 @@ public class FaithManager : NetworkBehaviour
     private void OnCurrentFaithChanged(float oldValue, float newValue)
     {
         OnFaithChanged?.Invoke(newValue, maxFaith);
+        // bool canCast = newValue 
     }
 
     private void OnMaxFaithChanged(float oldValue, float newValue)

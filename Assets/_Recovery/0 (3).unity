@@ -12847,8 +12847,7 @@ MonoBehaviour:
   syncDirection: 0
   syncMode: 0
   syncInterval: 0
-  canCast: 1
-  passiveDrainPerSecond: 0
+  passiveDrainPerSecond: 0.2
   testReduceKey: 45
   testIncreaseKey: 61
 --- !u!114 &2090446807

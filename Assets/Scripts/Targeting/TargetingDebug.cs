@@ -15,6 +15,7 @@ public class TargetingDebug : NetworkBehaviour
     public GameObject bookObject;
     public Vector3 bookOffset = new Vector3(0.3f, -0.2f, 0.5f);
     public float bookScale = 1f;
+    public string currentAttack = "Lightning";
     
     [Header("Visual Settings")]
     public Material cylinderMaterial;
@@ -39,13 +40,20 @@ public class TargetingDebug : NetworkBehaviour
     private List<Collider> detectedTargets = new List<Collider>();
     private List<Collider> previousTargets = new List<Collider>();
     
+    private bool canCast = true;
+    private Dictionary<string, AttackData> attackMap;
+    private FaithManager faithManager;
+    
     void Start()
     {
+        InitializeAttackData();
+        faithManager = FindFirstObjectByType<FaithManager>();
+
         if (!isLocalPlayer)
         {
             return;
         }
-        
+    
         cam = GetComponentInChildren<Camera>();
         if (cam == null)
             cam = Camera.main;
@@ -54,7 +62,14 @@ public class TargetingDebug : NetworkBehaviour
             Debug.LogError("TargetingDebug: No camera found!");
             return;
         }
-        
+
+        if (faithManager == null)
+        {
+            Debug.LogError("Could not find FaithManager");
+            return;
+        }
+
+
         if (bookObject == null)
         {
             Debug.LogError("TargetingDebug: Book Object not assigned in Inspector!");
@@ -73,6 +88,24 @@ public class TargetingDebug : NetworkBehaviour
         
         Debug.Log($"TargetingDebug initialized for local player. Camera: {cam.name}, Book: {bookObject.name}");
     }
+
+    void InitializeAttackData()
+        {
+            attackMap = new Dictionary<string, AttackData>();
+
+            attackMap["Lightning"] = new AttackData(
+                attackName: "Lightning",
+                cost: 80f,
+                cooldown: 1.5f,
+                damage: 40f,
+                targetType: AttackTargetType.Point
+            )
+            {
+                vfxPrefab = lightningPrefab,
+                vfxScale = 15f,
+                vfxDuration = lightningDuration
+            };
+        }
     
     void OnAimingModeChanged(bool oldValue, bool newValue)
     {
@@ -173,6 +206,24 @@ public class TargetingDebug : NetworkBehaviour
     void Update()
     {
         if (!isLocalPlayer) return;
+
+        if (attackMap != null 
+            && attackMap.ContainsKey(currentAttack)
+            && faithManager != null)
+        {
+            float required = attackMap[currentAttack].cost;
+            float current = faithManager.GetCurrentFaith();
+
+            bool newCanCast = current >= required;
+
+            if (newCanCast != canCast)
+            {
+                 Debug.Log($"State canCast has changed, is now: {newCanCast}");
+            }
+
+            canCast = newCanCast;
+        }
+
         
         if (cam == null || bookObject == null) return;
         
@@ -187,8 +238,7 @@ public class TargetingDebug : NetworkBehaviour
         
         if (Input.GetMouseButtonDown(0))
         {
-            // Call command to spawn lightning on all clients
-            CmdSpawnLightning(hitPoint);
+            AttemptAttack();
         }
         
         UpdateBookPosition();
@@ -338,6 +388,41 @@ public class TargetingDebug : NetworkBehaviour
         float distanceFromCenter = Vector3.Distance(hit.transform.position, hitPoint);
         Debug.Log($"    └─ Distance from center: {distanceFromCenter:F2}m");
     }
+
+    void AttemptAttack()
+    {
+        //Client side check first
+        if (!canCast)
+        {
+            Debug.Log("Not enough faith to cast, blocking attack");
+            return;
+        }
+       
+
+       //Server side request after
+        CmdRequestAttack(currentAttack, hitPoint);
+
+        //this is to test how it looks after
+        SpawnLocalAttackVFX();
+
+    }
+
+    void SpawnLocalAttackVFX()
+    {
+        AttackData currAttackData = attackMap[currentAttack];
+
+        if (currAttackData.vfxPrefab == null)
+        {
+            Debug.Log("No VFX prefab assigned for attack: " + currentAttack);
+            return;
+        }
+
+        Vector3 pos = hitPoint + Vector3.up * lightningHeight;
+
+        GameObject vfx = Instantiate(currAttackData.vfxPrefab, pos,  Quaternion.identity);
+        vfx.transform.localScale = Vector3.one * currAttackData.vfxScale;
+        Destroy(vfx, currAttackData.vfxDuration);
+    }
     
     public List<Collider> GetDetectedTargets()
     {
@@ -345,53 +430,157 @@ public class TargetingDebug : NetworkBehaviour
     }
     
     // Command: Client sends spawn request to server
+    // [Command]
+    // void CmdSpawnLightning(Vector3 position)
+    // {
+    //     // Server tells all clients to spawn lightning
+    //     RpcSpawnLightning(position);
+    // }
+
+    // [Command]
+    // void CmdAttack(Vector3 position)
+    // {
+    //     RpcAttack(position);
+    // }
+
     [Command]
-    void CmdSpawnLightning(Vector3 position)
+    void CmdRequestAttack(string attackName, Vector3 position, NetworkConnectionToClient sender = null)
     {
-        // Server tells all clients to spawn lightning
-        RpcSpawnLightning(position);
-    }
-    
-    // ClientRpc: All clients spawn lightning at the same position
-    [ClientRpc]
-    void RpcSpawnLightning(Vector3 position)
-    {
-        SpawnLightningLocal(position);
-    }
-    
-    void SpawnLightningLocal(Vector3 position)
-    {
-        if (lightningPrefab == null)
+        
+        Debug.Log($"[SERVER] CmdRequestAttack RECEIVED from {sender.connectionId}");
+
+        if (attackMap == null)
         {
-            Debug.LogWarning("Cannot spawn lightning: Prefab not assigned");
+            Debug.LogError("[SERVER] attackMap is NULL");
             return;
         }
         
-        Vector3 spawnPosition = position + Vector3.up * lightningHeight;
-        GameObject lightning = Instantiate(lightningPrefab, spawnPosition, Quaternion.identity);
-        lightning.transform.localScale = Vector3.one * 15f;
-        
-        // Manually assign camera to billboard
-        Billboard billboard = lightning.GetComponent<Billboard>();
-        if (billboard != null && cam != null)
+        if (!attackMap.ContainsKey(attackName))
         {
-            billboard.targetCamera = cam;
+            Debug.Log($"Invalid attack request: {attackName}");
+            return;
+        }
+
+        AttackData currAttackData = attackMap[attackName];
+
+        //Server Faith Check
+        if (faithManager.GetCurrentFaith() < currAttackData.cost)
+        {
+            canCast = false;
+            Debug.Log("Not enough faith!");
+            return;
+        }
+
+        faithManager.ReduceFaith(currAttackData.cost);
+
+        RpcPerformAttack(attackName, position);
+    }
+
+    [ClientRpc]
+    void RpcPerformAttack(string attackName, Vector3 position)
+    {
+        // Step 1: Check if attack exists
+        if (!attackMap.ContainsKey(attackName))
+        {
+            Debug.LogError($"[CLIENT] attackMap missing key: {attackName}");
+            return;
+        }
+    
+        AttackData currAttackData = attackMap[attackName];
+        
+        // Step 2: Check if prefab exists
+        if (currAttackData.vfxPrefab == null)
+        {
+            Debug.LogError($"[CLIENT] No VFX prefab for {attackName}");
+            return;
         }
         
-        // Destroy after duration
-        Destroy(lightning, lightningDuration);
+        // Step 3: CREATE the vfx GameObject FIRST
+        Vector3 pos = position + Vector3.up * lightningHeight;
+        GameObject vfx = Instantiate(currAttackData.vfxPrefab, pos, Quaternion.identity);
+        vfx.transform.localScale = Vector3.one * currAttackData.vfxScale;
         
-        // Only log on local player
-        if (isLocalPlayer)
+        // Step 4: NOW use vfx (after it exists)
+        Camera clientCam = FindLocalPlayerCamera();
+        Billboard billboard = vfx.GetComponent<Billboard>();
+        
+        if (billboard != null && clientCam != null)
         {
-            Debug.Log($"⚡ Lightning spawned at {spawnPosition}");
-            
-            if (detectedTargets.Count > 0)
+            billboard.targetCamera = clientCam;
+            Debug.Log($"[CLIENT] Assigned camera {clientCam.name} to lightning billboard");
+        }
+    
+        // Step 5: Destroy it
+        Destroy(vfx, currAttackData.vfxDuration);
+    }
+
+    Camera FindLocalPlayerCamera()
+    {
+        TargetingDebug[] allPlayers = FindObjectsOfType<TargetingDebug>();
+        
+        foreach (TargetingDebug player in allPlayers)
+        {
+            if (player.isLocalPlayer)
             {
-                Debug.Log($"⚡ Lightning struck {detectedTargets.Count} target(s)!");
+                Camera playerCam = player.GetComponentInChildren<Camera>();
+                if (playerCam != null)
+                {
+                    return playerCam;
+                }
             }
         }
+        
+        return FindObjectOfType<Camera>();
     }
+    
+    // ClientRpc: All clients spawn lightning at the same position
+    // [ClientRpc]
+    // void RpcSpawnLightning(Vector3 position)
+    // {
+    //     SpawnLightningLocal(position);
+    // }
+    
+    // [ClientRpc]
+    // void RpcAttack(Vector3 position)
+    // {
+    //     //will take in an attack and then will do the same thing as spawn lightning
+        
+    // }
+
+
+    // void SpawnLightningLocal(Vector3 position)
+    // {
+    //     if (lightningPrefab == null)
+    //     {
+    //         Debug.LogWarning("Cannot spawn lightning: Prefab not assigned");
+    //         return;
+    //     }
+        
+    //     Vector3 spawnPosition = position + Vector3.up * lightningHeight;
+    //     GameObject lightning = Instantiate(lightningPrefab, spawnPosition, Quaternion.identity);
+    //     lightning.transform.localScale = Vector3.one * 15f;
+        
+    //     // Manually assign camera to billboard
+    //     Billboard billboard = lightning.GetComponent<Billboard>();
+    //     if (billboard != null && cam != null)
+    //     {
+    //         billboard.targetCamera = cam;
+    //     }
+        
+    //     // Destroy after duration
+    //     Destroy(lightning, lightningDuration);
+        
+    //     // Only log on local player
+    //     if (isLocalPlayer)
+    //     {
+    //         Debug.Log($"⚡ Lightning spawned at {spawnPosition}");
+            
+    //         if (detectedTargets.Count > 0)
+    //         {
+    //             Debug.Log($"⚡ Lightning struck {detectedTargets.Count} target(s)!");
+    //         }
+    //     }
+    // }
     
     private void OnDrawGizmos()
     {
