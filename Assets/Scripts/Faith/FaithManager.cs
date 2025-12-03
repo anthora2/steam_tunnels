@@ -48,7 +48,8 @@ public class FaithManager : NetworkBehaviour
         // Only server applies passive drain
         if (isServer)
         {
-            currentFaith -= passiveDrainPerSecond * Time.deltaTime;
+            currentFaith += passiveDrainPerSecond * Time.deltaTime;
+            // currentFaith -= passiveDrainPerSecond * Time.deltaTime;
             currentFaith = Mathf.Clamp(currentFaith, 0f, maxFaith);
             // Debug.Log(currentFaith);
             // Debug.Log("Above is current faith, should be decreasing");
