@@ -1,136 +1,152 @@
 using UnityEngine;
+using Mirror;
 using System.Collections.Generic;
-using System;
+using System.Linq;
 
+// Serializable data structure for inventory items
+// Only stores itemName string -> Mirror can't serialize ScriptableObject references
 [System.Serializable]
-public class InventorySlot
+public class InventoryItemData
 {
-    public Item item;
-    public int quantity;
+    public string itemName;
 
-    public int TotalWeight => item.weight * quantity;
-
-    public InventorySlot(Item item, int quantity)
+    public InventoryItemData(string itemName)
     {
-        this.item = item;
-        this.quantity = quantity;
+        this.itemName = itemName;
     }
-
-    public bool IsFull => quantity >= item.maxStackSize;
-    public bool IsEmpty => quantity <= 0;
 }
 
-public class Inventory : MonoBehaviour
+// Server-authoritative inventory system
+// Only the server can modify items -> clients are notified via TargetRpc when inventory changes
+public class Inventory : NetworkBehaviour
 {
-    [Header("Inventory Settings")]
-    public int inventorySize = 5;  // hardcoded inventory size for now
-    public int maxWeight = 100;     // hardcoded max weight for now
+    private const int MAX_SLOTS = 10;
 
-    [Header("Current State")]
-    public List<InventorySlot> items = new List<InventorySlot>();
-    public int currentWeight = 0;
-    public event Action OnInventoryChanged;
+    // Server-side storage: list of InventoryItemData
+    private List<InventoryItemData> serverItems = new List<InventoryItemData>();
 
-    // Attempts to add an item to the inventory. Returns true if all items were added successfully.
-    public bool AddItem(Item item, int quantity)
+    // Client-side cache (updated via TargetRpc)
+    private List<InventoryItemData> clientItems = new List<InventoryItemData>();
+
+    // Event triggered when inventory changes (called on client after TargetRpc)
+    public System.Action<List<InventoryItemData>> OnInventoryChanged;
+
+    public override void OnStartServer()
     {
-        if (item == null || quantity <= 0)
-            return false;
+        base.OnStartServer();
+        serverItems = new List<InventoryItemData>();
+    }
 
-        // Determine effective stack size (non-stackable items count as 1 per slot, and guard against 0)
-        int effectiveMaxStack = item.stackable ? Mathf.Max(1, item.maxStackSize) : 1;
-
-        int remaining = quantity;
-
-        // Try to add to existing inventory slots first
-        foreach (var slot in items)
+    // Server-only: Add an item to the inventory
+    [Server]
+    public void AddItem(string itemName)
+    {
+        if (string.IsNullOrEmpty(itemName))
         {
-            if (slot.item == item && item.stackable && slot.quantity < effectiveMaxStack)
+            Debug.LogWarning($"[Inventory] Invalid item name: {itemName}");
+            return;
+        }
+
+        // Check if inventory is full
+        if (serverItems.Count >= MAX_SLOTS)
+        {
+            Debug.Log("[Inventory] Inventory is full");
+            return;
+        }
+
+        // Add new item
+        serverItems.Add(new InventoryItemData(itemName));
+        NotifyClient();
+        Debug.Log($"[Inventory] Server added {itemName} to inventory. Total items: {serverItems.Count}");
+    }
+
+    // Server-only: Remove an item from the inventory
+    [Server]
+    public void RemoveItem(string itemName)
+    {
+        if (string.IsNullOrEmpty(itemName))
+        {
+            Debug.LogWarning($"[Inventory] Invalid item name: {itemName}");
+            return;
+        }
+
+        int removed = serverItems.RemoveAll(item => item.itemName == itemName);
+        if (removed > 0)
+        {
+            NotifyClient();
+            Debug.Log($"[Inventory] Server removed {itemName} from inventory. Total items: {serverItems.Count}");
+        }
+    }
+
+    private void NotifyClient()
+    {
+        NetworkIdentity netIdentity = GetComponent<NetworkIdentity>();
+        if (netIdentity == null || netIdentity.connectionToClient == null)
+        {
+            Debug.LogError($"[Inventory] Cannot send TargetRpc: NetworkIdentity or connectionToClient is null!");
+            return;
+        }
+
+        // Notify the client that owns this inventory
+        TargetUpdateInventory(netIdentity.connectionToClient, SerializeInventory());
+
+        // In host mode, also update client-side cache directly
+        if (isClient && netIdentity.isLocalPlayer)
+        {
+            clientItems = DeserializeInventory(SerializeInventory());
+            OnInventoryChanged?.Invoke(clientItems);
+        }
+    }
+
+    // Get all items in the inventory (works on both server and client).
+    public List<InventoryItemData> GetItems()
+    {
+        if (isServer)
+            return new List<InventoryItemData>(serverItems);
+        else
+            return new List<InventoryItemData>(clientItems);
+    }
+
+    // Get a specific item by name (works on both server and client)
+    public InventoryItemData GetItem(string itemName)
+    {
+        List<InventoryItemData> items = isServer ? serverItems : clientItems;
+        return items.Find(item => item.itemName == itemName);
+    }
+
+    // Serialize inventory to string array for network transmission
+    private string[] SerializeInventory()
+    {
+        return serverItems.Select(item => item.itemName).ToArray();
+    }
+
+    // Deserialize inventory from string array
+    private List<InventoryItemData> DeserializeInventory(string[] serialized)
+    {
+        List<InventoryItemData> items = new List<InventoryItemData>();
+        if (serialized == null || serialized.Length == 0)
+            return items;
+
+        foreach (string itemName in serialized)
+        {
+            if (!string.IsNullOrEmpty(itemName))
             {
-                int space = effectiveMaxStack - slot.quantity;
-                int toAdd = Mathf.Min(space, remaining);
-
-                // Check weight before adding
-                int additionalWeight = item.weight * toAdd;
-                if (currentWeight + additionalWeight > maxWeight)
-                    return false;
-
-                slot.quantity += toAdd;
-                remaining -= toAdd;
-                currentWeight += additionalWeight;
-
-                if (remaining <= 0)
-                {
-                    OnInventoryChanged?.Invoke();
-                    return true;
-                }
+                items.Add(new InventoryItemData(itemName));
             }
         }
-
-        // Add new slots if space allows
-        while (remaining > 0 && items.Count < inventorySize)
-        {
-            int toAdd = Mathf.Min(effectiveMaxStack, remaining);
-            if (toAdd <= 0)
-                break;
-
-            int additionalWeight = item.weight * toAdd;
-            if (currentWeight + additionalWeight > maxWeight)
-                return false;
-
-            items.Add(new InventorySlot(item, toAdd));
-            remaining -= toAdd;
-            currentWeight += additionalWeight;
-        }
-
-        // Return whether all items fit
-        bool success = remaining <= 0;
-        if (success)
-        {
-            Debug.Log($"Inventory changed: Added new item(s) to inventory. Total items: {items.Count}");
-            OnInventoryChanged?.Invoke();
-        }
-        return success;
+        return items;
     }
 
-    // Removes an item from the inventory and updates total weight.
-    public void RemoveItem(Item item, int quantity)
+    // TargetRpc: Notify the client when inventory changes
+    // Only called on the client that owns this inventory.
+    [TargetRpc]
+    private void TargetUpdateInventory(NetworkConnection conn, string[] serializedInventory)
     {
-        for (int i = 0; i < items.Count; i++)
-        {
-            var slot = items[i];
-            if (slot.item == item)
-            {
-                int toRemove = Mathf.Min(quantity, slot.quantity);
+        // Update client-side cache
+        clientItems = DeserializeInventory(serializedInventory);
 
-                slot.quantity -= toRemove;
-                currentWeight -= item.weight * toRemove;
-                quantity -= toRemove;
-
-                if (slot.IsEmpty)
-                {
-                    items.RemoveAt(i);
-                    i--;
-                }
-
-                if (quantity <= 0)
-                {
-                    OnInventoryChanged?.Invoke();
-                    return;
-                }
-            }
-        }
-    }
-
-    // Returns the remaining weight capacity.
-    public int RemainingWeightCapacity()
-    {
-        return Mathf.Max(0, maxWeight - currentWeight);
-    }
-
-    // Returns the number of empty slots available.
-    public int EmptySlots()
-    {
-        return inventorySize - items.Count;
+        // Trigger event so UI can update
+        OnInventoryChanged?.Invoke(clientItems);
+        Debug.Log($"[Inventory] Client received inventory update: {clientItems.Count} items");
     }
 }
